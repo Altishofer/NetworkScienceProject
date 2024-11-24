@@ -1,7 +1,6 @@
 .idea
 .git
 
-*.csv
-
-
 dataset/*.csv
+
+.DS_Store
