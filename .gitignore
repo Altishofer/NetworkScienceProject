@@ -6,3 +6,5 @@ gravity/*.csv
 basedata/*.csv
 
 .DS_Store
+
+.sandrin
