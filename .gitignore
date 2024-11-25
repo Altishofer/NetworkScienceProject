@@ -2,5 +2,7 @@
 .git
 
 dataset/*.csv
+gravity/*.csv
+basedata/*.csv
 
 .DS_Store
