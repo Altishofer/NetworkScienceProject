@@ -7,4 +7,4 @@ basedata/*.csv
 
 .DS_Store
 
-.sandrin
+*sandrin*
