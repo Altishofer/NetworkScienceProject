@@ -6,3 +6,5 @@ plotly
 numpy
 geopy
 geopandas
+graph-tool
+sqlite3
