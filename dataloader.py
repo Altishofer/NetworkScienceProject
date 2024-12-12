@@ -20,10 +20,10 @@ def time_execution(method):
 class DataLoader:
     def __init__(
         self,
-        data_path_pattern="dataset/BACI*.csv",
-        country_codes_path="dataset/country_codes_V202401b.csv",
-        product_codes_path="dataset/product_codes_HS22_V202401b.csv",
-        gravity_path="gravity/Gravity_V202211.csv"
+        data_path_pattern=os.path.join("dataset", "BACI*.csv"),
+        country_codes_path=os.path.join("dataset", "country_codes_V202401b.csv"),
+        product_codes_path=os.path.join("dataset", "product_codes_HS22_V202401b.csv"),
+        gravity_path=os.path.join("gravity", "Gravity_V202211.csv")
     ):
         self.data_path_pattern = data_path_pattern
         self.country_codes_path = country_codes_path
