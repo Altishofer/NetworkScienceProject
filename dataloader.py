@@ -1,6 +1,8 @@
 import os
 import glob
 import time
+
+import networkx as nx
 import polars as pl
 
 def time_execution(method):
@@ -172,7 +174,8 @@ class DataLoader:
 
         df = df.with_columns([
             pl.col("v_clean").str.strip_chars().cast(pl.Float64).alias("v"),
-            pl.col("q_clean").str.strip_chars().cast(pl.Float64).alias("q")
+            pl.col("q_clean").str.strip_chars().cast(pl.Float64).alias("q"),
+            pl.col("t").cast(pl.Int64)
         ])
 
         df = df.drop(["v_clean", "q_clean"])
@@ -180,7 +183,7 @@ class DataLoader:
 
 
     def get_data(self, hs_code: int = None, start_year: int = None, end_year: int = None) -> pl.DataFrame:
-        df_filtered = self.df
+        df_filtered = self.df.__copy__()
 
         # Filter by HS code
         if hs_code is not None:
@@ -193,3 +196,40 @@ class DataLoader:
             df_filtered = df_filtered.filter(pl.col("t") <= end_year)
 
         return df_filtered
+
+    def get_yearly_graphs(self, years):
+        # Convert the internally stored Polars DataFrame to a pandas DataFrame
+        df = self.df.to_pandas()
+        yearly_graphs = {}
+        for y in years:
+            df_year = df[df["t"] == y]
+
+            if self.hs_code is not None:
+                df_year = df_year[df_year["k"] == self.hs_code]
+
+            df_agg = (
+                df_year
+                .groupby(["export_country", "import_country"], as_index=False)["v"]
+                .sum()
+            )
+
+            G = nx.Graph()
+            for _, row in df_agg.iterrows():
+                exporter = row["export_country"]
+                importer = row["import_country"]
+                value = row["v"]
+                if exporter != importer:
+                    if G.has_edge(exporter, importer):
+                        G[exporter][importer]['weight'] += value
+                    else:
+                        G.add_edge(exporter, importer, weight=value)
+            yearly_graphs[y] = G
+
+        return yearly_graphs
+
+
+if __name__ == "__main__":
+    loader = DataLoader(hs_code=282520)
+    polar_df = loader.get_data()
+    df = polar_df.to_pandas()
+    loader.get_yearly_graphs([2015, 2016, 2017, 2018, 2019, 2020])
