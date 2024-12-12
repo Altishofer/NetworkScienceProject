@@ -20,11 +20,14 @@ def time_execution(method):
 class DataLoader:
     def __init__(
         self,
+        hs_code: int = None,
         data_path_pattern=os.path.join("dataset", "BACI*.csv"),
         country_codes_path=os.path.join("dataset", "country_codes_V202401b.csv"),
         product_codes_path=os.path.join("dataset", "product_codes_HS22_V202401b.csv"),
         gravity_path=os.path.join("gravity", "Gravity_V202211.csv")
     ):
+        self.hs_code = hs_code
+
         self.data_path_pattern = data_path_pattern
         self.country_codes_path = country_codes_path
         self.product_codes_path = product_codes_path
@@ -56,6 +59,10 @@ class DataLoader:
             pl.col("j").cast(pl.Int64),
             pl.col("k").cast(pl.Int64)
         ])
+
+        if self.hs_code is not None:
+            df = df.filter(pl.col("k") == self.hs_code)
+
         return df
 
 
