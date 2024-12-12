@@ -9,3 +9,7 @@ geopandas
 graph-tool
 sqlite3
 polars~=1.16.0
+seaborn
+torch-geometric
+umap-learn
+sklearn
