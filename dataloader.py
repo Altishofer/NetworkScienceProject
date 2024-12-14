@@ -85,7 +85,9 @@ class DataLoader:
         gravity = gravity.select([
             "iso3_o", "iso3_d", "year", "gdpcap_d", "gdpcap_o", "tradeflow_baci",
             "diplo_disagreement", "comrelig", "distw_harmonic", "pop_o", "pop_d",
-            "wto_o", "wto_d", "eu_o", "eu_d", "entry_cost_o", "entry_cost_d"
+            "wto_o", "wto_d", "eu_o", "eu_d", "entry_cost_o", "entry_cost_d",
+            "comlang_off", "gatt_o", "gatt_d", "fta_wto", "tradeflow_imf_o",
+            "tradeflow_imf_d"
         ])
 
         gravity = gravity.filter(pl.col("year") > 2000)
