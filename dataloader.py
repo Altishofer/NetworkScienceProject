@@ -199,6 +199,9 @@ class DataLoader:
 
         return df_filtered
 
+    def get_baseline(self):
+        return self.df.group_by(["t", "export_country", "import_country"]).agg([pl.sum("q").alias("q_sum")])
+
     def get_yearly_graphs(self, years):
         # Convert the internally stored Polars DataFrame to a pandas DataFrame
         df = self.df.to_pandas()
