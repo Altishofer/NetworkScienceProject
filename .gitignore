@@ -8,3 +8,4 @@ basedata/*.csv
 .DS_Store
 
 *sandrin*
+*.png
