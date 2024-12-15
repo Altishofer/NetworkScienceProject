@@ -85,7 +85,9 @@ class DataLoader:
         gravity = gravity.select([
             "iso3_o", "iso3_d", "year", "gdpcap_d", "gdpcap_o", "tradeflow_baci",
             "diplo_disagreement", "comrelig", "distw_harmonic", "pop_o", "pop_d",
-            "wto_o", "wto_d", "eu_o", "eu_d", "entry_cost_o", "entry_cost_d"
+            "wto_o", "wto_d", "eu_o", "eu_d", "entry_cost_o", "entry_cost_d",
+            "comlang_off", "gatt_o", "gatt_d", "fta_wto", "tradeflow_imf_o",
+            "tradeflow_imf_d"
         ])
 
         gravity = gravity.filter(pl.col("year") > 2000)
@@ -196,6 +198,9 @@ class DataLoader:
             df_filtered = df_filtered.filter(pl.col("t") <= end_year)
 
         return df_filtered
+
+    def get_baseline(self):
+        return self.df.group_by(["t", "export_country", "import_country"]).agg([pl.sum("q").alias("q_sum")])
 
     def get_yearly_graphs(self, years):
         # Convert the internally stored Polars DataFrame to a pandas DataFrame
