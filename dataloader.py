@@ -3,6 +3,7 @@ import glob
 import time
 
 import networkx as nx
+import pandas as pd
 import polars as pl
 
 def time_execution(method):
@@ -199,11 +200,42 @@ class DataLoader:
 
         return df_filtered
 
-    def get_baseline(self):
-        return self.df.group_by(["t", "export_country", "import_country"]).agg([pl.sum("q").alias("q_sum")])
+    def get_baseline(self, load_precompute=False):
+        if load_precompute:
+            baseline_df = pd.read_csv(os.path.join('dataset', 'summed_base_data.csv'))
+            return baseline_df
+
+        return self.df.group_by(['t', 'export_country', 'import_country']).agg([pl.sum('q').alias('q_sum')])
+
+    def _aggregate_and_build_graph(self, df):
+        df_agg = (
+            df
+            .groupby(["export_country", "import_country"], as_index=False)["v"]
+            .sum()
+        )
+
+        G = nx.Graph()
+        for _, row in df_agg.iterrows():
+            exporter = row["export_country"]
+            importer = row["import_country"]
+            value = row["v"]
+            if exporter != importer:
+                if G.has_edge(exporter, importer):
+                    G[exporter][importer]['weight'] += value
+                else:
+                    G.add_edge(exporter, importer, weight=value)
+        return G
+
+    def get_yearly_baseline_graphs(self, df, years):
+        yearly_graphs = {}
+        for y in years:
+            df_year = df[df["t"] == y]
+            G = self._aggregate_and_build_graph(df_year)
+            yearly_graphs[y] = G
+
+        return yearly_graphs
 
     def get_yearly_graphs(self, years):
-        # Convert the internally stored Polars DataFrame to a pandas DataFrame
         df = self.df.to_pandas()
         yearly_graphs = {}
         for y in years:
@@ -212,22 +244,7 @@ class DataLoader:
             if self.hs_code is not None:
                 df_year = df_year[df_year["k"] == self.hs_code]
 
-            df_agg = (
-                df_year
-                .groupby(["export_country", "import_country"], as_index=False)["v"]
-                .sum()
-            )
-
-            G = nx.Graph()
-            for _, row in df_agg.iterrows():
-                exporter = row["export_country"]
-                importer = row["import_country"]
-                value = row["v"]
-                if exporter != importer:
-                    if G.has_edge(exporter, importer):
-                        G[exporter][importer]['weight'] += value
-                    else:
-                        G.add_edge(exporter, importer, weight=value)
+            G = self._aggregate_and_build_graph(df_year)
             yearly_graphs[y] = G
 
         return yearly_graphs
