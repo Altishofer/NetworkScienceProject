@@ -198,32 +198,41 @@ class DataLoader:
         if end_year is not None:
             df_filtered = df_filtered.filter(pl.col("t") <= end_year)
 
+        df_filtered = df_filtered.filter(pl.col("v") > 0)
+        df_filtered = df_filtered.filter(pl.col("q") > 0)
+
         return df_filtered
 
     def get_baseline(self, load_precompute=False):
         if load_precompute:
             baseline_df = pd.read_csv(os.path.join('dataset', 'summed_base_data.csv'))
+            baseline_df = baseline_df[baseline_df["v"] > 0]
             return baseline_df
 
         return self.df.group_by(['t', 'export_country', 'import_country']).agg([pl.sum('q').alias('q_sum')])
 
     def _aggregate_and_build_graph(self, df):
+        # Aggregate trade values by exporter-importer pairs
         df_agg = (
             df
             .groupby(["export_country", "import_country"], as_index=False)["v"]
             .sum()
         )
-
         G = nx.Graph()
         for _, row in df_agg.iterrows():
             exporter = row["export_country"]
             importer = row["import_country"]
             value = row["v"]
+
             if exporter != importer:
+                if value <= 0:
+                    continue
                 if G.has_edge(exporter, importer):
                     G[exporter][importer]['weight'] += value
+                    G[exporter][importer]['inverse_weight'] = 1 / G[exporter][importer]['weight']
                 else:
-                    G.add_edge(exporter, importer, weight=value)
+                    G.add_edge(exporter, importer, weight=value, inverse_weight=1 / value)
+
         return G
 
     def get_yearly_baseline_graphs(self, df, years):
