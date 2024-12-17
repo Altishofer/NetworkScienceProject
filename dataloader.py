@@ -1,3 +1,4 @@
+import math
 import os
 import glob
 import time
@@ -230,6 +231,7 @@ class DataLoader:
                 if G.has_edge(exporter, importer):
                     G[exporter][importer]['weight'] += value
                     G[exporter][importer]['inverse_weight'] = 1 / G[exporter][importer]['weight']
+                    G[exporter][importer]['log_weight'] = math.log(G[exporter][importer]['weight']+1)
                 else:
                     G.add_edge(exporter, importer, weight=value, inverse_weight=1 / value)
 
