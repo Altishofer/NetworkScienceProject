@@ -9,7 +9,17 @@ import polars as pl
 
 def time_execution(method):
     """
-    Decorator that measures the execution time of the decorated method.
+    Decorator that measures and prints the execution time of the decorated method.
+
+    Parameters
+    ----------
+    method : callable
+        The method to be decorated.
+
+    Returns
+    -------
+    callable
+        The wrapped method that prints execution time upon completion.
     """
     def wrapper(self, *args, **kwargs):
         start = time.time()
@@ -22,6 +32,11 @@ def time_execution(method):
 
 
 class DataLoader:
+    """
+    A class to handle loading, merging, and cleaning trade data along with
+    country codes, product codes, and gravity variables. Prepares a combined
+    dataset ready for further analysis, including building yearly graphs.
+    """
     def __init__(
         self,
         hs_code: int = None,
@@ -30,6 +45,22 @@ class DataLoader:
         product_codes_path=os.path.join("dataset", "product_codes_HS22_V202401b.csv"),
         gravity_path=os.path.join("gravity", "Gravity_V202211.csv")
     ):
+        """
+         Initialize the DataLoader instance.
+
+         Parameters
+         ----------
+         hs_code : int, optional
+             The specific HS code (product) to filter on. If None, all products are included.
+         data_path_pattern : str, optional
+             Glob pattern to locate BACI dataset CSV files.
+         country_codes_path : str, optional
+             Path to the CSV file containing country code mappings.
+         product_codes_path : str, optional
+             Path to the CSV file containing product code mappings.
+         gravity_path : str, optional
+             Path to the Gravity dataset CSV file.
+         """
         self.hs_code = hs_code
 
         self.data_path_pattern = data_path_pattern
@@ -41,6 +72,14 @@ class DataLoader:
 
     @time_execution
     def _initialize_data(self):
+        """
+        Internal method to load and prepare all datasets:
+        - Loads BACI trade data (optionally filtered by hs_code)
+        - Loads country and product codes
+        - Loads and preprocesses gravity data
+        - Merges all data sources
+        - Cleans the final merged DataFrame
+        """
         # Loading base data
         self.df = self._load_baci_data()
         self.country_codes = self._load_country_codes()
@@ -55,6 +94,15 @@ class DataLoader:
 
 
     def _load_baci_data(self) -> pl.DataFrame:
+        """
+         Load and concatenate all BACI dataset CSV files matching the given pattern.
+         Optionally filters by the specified hs_code.
+
+         Returns
+         -------
+         pl.DataFrame
+             A Polars DataFrame containing BACI trade data with columns cast to Int64 where appropriate.
+         """
         all_files = glob.glob(self.data_path_pattern)
         dataframes = [pl.read_csv(file) for file in all_files]
         df = pl.concat(dataframes)
@@ -71,31 +119,75 @@ class DataLoader:
 
 
     def _load_country_codes(self) -> pl.DataFrame:
+        """
+        Load the country codes CSV and ensure 'country_code' is cast to Int64.
+
+        Returns
+        -------
+        pl.DataFrame
+            A Polars DataFrame of country codes.
+        """
         cc = pl.read_csv(self.country_codes_path)
         cc = cc.with_columns(pl.col("country_code").cast(pl.Int64))
         return cc
 
 
     def _load_product_codes(self) -> pl.DataFrame:
+        """
+        Load the product codes CSV and cast 'code' to Int64.
+
+        Returns
+        -------
+        pl.DataFrame
+            A Polars DataFrame of product codes.
+        """
         pc = pl.read_csv(self.product_codes_path)
         pc = pc.with_columns(pl.col("code").cast(pl.Int64))
         return pc
 
 
     def _preprocess_gravity_data(self) -> pl.DataFrame:
+        """
+        Load and preprocess the Gravity dataset:
+        - Selects relevant columns
+        - Filters for years > 2000
+        - Ensures uniqueness of (iso3_o, iso3_d, year)
+        - Joins country names and performs forward-fill to handle missing values over time
+
+        Returns
+        -------
+        pl.DataFrame
+            A Polars DataFrame containing gravity data with stable attributes forward-filled.
+        """
         gravity = pl.read_csv(self.gravity_path, ignore_errors=True)
         gravity = gravity.select([
-            "iso3_o", "iso3_d", "year", "gdpcap_d", "gdpcap_o", "tradeflow_baci",
-            "diplo_disagreement", "comrelig", "distw_harmonic", "pop_o", "pop_d",
-            "wto_o", "wto_d", "eu_o", "eu_d", "entry_cost_o", "entry_cost_d",
-            "comlang_off", "gatt_o", "gatt_d", "fta_wto", "tradeflow_imf_o",
-            "tradeflow_imf_d"
+            "iso3_o", "iso3_d",
+            "year",
+            "gdpcap_d", "gdpcap_o",
+            "tradeflow_baci",
+            "diplo_disagreement",
+            "comrelig",
+            "distw_harmonic",
+            "pop_o", "pop_d",
+            "wto_o", "wto_d",
+            "eu_o", "eu_d",
+            "entry_cost_o", "entry_cost_d",
+            "comlang_off",
+            "gatt_o", "gatt_d",
+            "fta_wto",
+            "tradeflow_imf_o", "tradeflow_imf_d",
+            "comlang_ethno",
+            "comcol", "col45",
+            "comleg_pretrans", "comleg_posttrans",
+            "col_dep_ever",
+            "empire",
+            "sibling_ever",
+            "scaled_sci_2021"
         ])
 
         gravity = gravity.filter(pl.col("year") > 2000)
         gravity = gravity.unique(subset=["iso3_o", "iso3_d", "year"], keep="first")
 
-        # Merge Country Names Into Gravity
         gravity = gravity.join(
             self.country_codes.select(["country_name", "country_iso3"]),
             left_on="iso3_o",
@@ -110,6 +202,13 @@ class DataLoader:
             how="left"
         ).rename({"country_name": "country_d"})
 
+        gravity_pd = gravity.to_pandas()
+        gravity_pd = gravity_pd.sort_values(["iso3_o", "iso3_d", "year"])
+
+        gravity_pd = gravity_pd.groupby(["iso3_o", "iso3_d"]).apply(lambda g: g.ffill())
+        gravity_pd = gravity_pd.reset_index(drop=True)
+
+        gravity = pl.from_pandas(gravity_pd)
         return gravity
 
 
@@ -120,7 +219,27 @@ class DataLoader:
         product_col="k",
         time_col="t"
     ) -> pl.DataFrame:
+        """
+         Merge export/import country names, product descriptions, and gravity data
+         into the main DataFrame.
 
+         Parameters
+         ----------
+         export_col : str, optional
+             Column name representing the exporter country code.
+         import_col : str, optional
+             Column name representing the importer country code.
+         product_col : str, optional
+             Column name representing the product code.
+         time_col : str, optional
+             Column name representing the time dimension (year).
+
+         Returns
+         -------
+         pl.DataFrame
+             The merged DataFrame including country names, product descriptions,
+             and gravity attributes.
+         """
         # Merge export country names
         df = self.df.join(
             self.country_codes.select(["country_code", "country_name"]),
@@ -157,6 +276,17 @@ class DataLoader:
 
 
     def _clean_data(self) -> pl.DataFrame:
+        """
+        Clean the merged DataFrame by:
+        - Filling null values in key columns
+        - Converting columns 'v' and 'q' from strings 'NA' to 0 if needed
+        - Casting 't' to Int64
+
+        Returns
+        -------
+        pl.DataFrame
+            The cleaned DataFrame ready for further filtering or aggregation.
+        """
         df = self.df.with_columns([
             pl.col("v").fill_null(0.0),
             pl.col("q").fill_null(0.0),
@@ -187,6 +317,24 @@ class DataLoader:
 
 
     def get_data(self, hs_code: int = None, start_year: int = None, end_year: int = None) -> pl.DataFrame:
+        """
+         Retrieve filtered data based on optional hs_code and year range filters.
+         Ensures 'v' and 'q' are positive.
+
+         Parameters
+         ----------
+         hs_code : int, optional
+             Filter by a specific HS code if provided.
+         start_year : int, optional
+             Include records from this year onwards.
+         end_year : int, optional
+             Include records up to this year.
+
+         Returns
+         -------
+         pl.DataFrame
+             The filtered DataFrame.
+         """
         df_filtered = self.df.__copy__()
 
         # Filter by HS code
@@ -204,7 +352,21 @@ class DataLoader:
 
         return df_filtered
 
-    def get_baseline(self, load_precompute=False):
+    def get_baseline(self, load_precompute=False) -> pl.DataFrame:
+        """
+        Get a baseline aggregated dataset. If 'load_precompute' is True, load from a precomputed file.
+        Otherwise, aggregate over 't', 'export_country', 'import_country' summing 'q'.
+
+        Parameters
+        ----------
+        load_precompute : bool, optional
+            If True, attempt to load precomputed baseline data from 'summed_base_data.csv'.
+
+        Returns
+        -------
+        pd.DataFrame or pl.DataFrame
+            The baseline aggregated dataset.
+        """
         if load_precompute:
             baseline_df = pd.read_csv(os.path.join('dataset', 'summed_base_data.csv'))
             baseline_df = baseline_df[baseline_df["v"] > 0]
@@ -212,8 +374,20 @@ class DataLoader:
 
         return self.df.group_by(['t', 'export_country', 'import_country']).agg([pl.sum('q').alias('q_sum')])
 
-    def _aggregate_and_build_graph(self, df):
-        # Aggregate trade values by exporter-importer pairs
+    def _aggregate_and_build_graph(self, df) -> nx.Graph:
+        """
+        Aggregate trade values by exporter-importer pairs and build a weighted undirected graph.
+
+        Parameters
+        ----------
+        df : pd.DataFrame
+            A DataFrame (Pandas) with at least 'export_country', 'import_country', and 'v' columns.
+
+        Returns
+        -------
+        nx.Graph
+            A NetworkX graph with edges weighted by the sum of 'v', plus inverse and log-transformed weights.
+        """
         df_agg = (
             df
             .groupby(["export_country", "import_country"], as_index=False)["v"]
@@ -237,7 +411,22 @@ class DataLoader:
 
         return G
 
-    def get_yearly_baseline_graphs(self, df, years):
+    def get_yearly_baseline_graphs(self, df, years) -> dict[int, nx.Graph]:
+        """
+        Build yearly baseline graphs from a given DataFrame and a list of years.
+
+        Parameters
+        ----------
+        df : pd.DataFrame
+            DataFrame containing 't', 'export_country', 'import_country', and 'v'.
+        years : list of int
+            List of years to build graphs for.
+
+        Returns
+        -------
+        dict
+            A dictionary keyed by year, with values as NetworkX graphs.
+        """
         yearly_graphs = {}
         for y in years:
             df_year = df[df["t"] == y]
@@ -247,6 +436,20 @@ class DataLoader:
         return yearly_graphs
 
     def get_yearly_graphs(self, years):
+        """
+        Build yearly graphs directly from the DataLoader's main dataset (self.df).
+        Optionally filtered by the instance's hs_code if provided.
+
+        Parameters
+        ----------
+        years : list of int
+            List of years to build graphs for.
+
+        Returns
+        -------
+        dict
+            A dictionary keyed by year, with values as NetworkX graphs of trade flows.
+        """
         df = self.df.to_pandas()
         yearly_graphs = {}
         for y in years:
@@ -259,10 +462,3 @@ class DataLoader:
             yearly_graphs[y] = G
 
         return yearly_graphs
-
-
-if __name__ == "__main__":
-    loader = DataLoader(hs_code=282520)
-    polar_df = loader.get_data()
-    df = polar_df.to_pandas()
-    loader.get_yearly_graphs([2015, 2016, 2017, 2018, 2019, 2020])
