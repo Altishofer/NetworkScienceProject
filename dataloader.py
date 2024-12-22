@@ -44,10 +44,10 @@ class DataLoader:
     def __init__(
         self,
         hs_code: int = None,
-        data_path_pattern=os.path.join("dataset", "BACI*.csv"),
-        country_codes_path=os.path.join("dataset", "country_codes_V202401b.csv"),
-        product_codes_path=os.path.join("dataset", "product_codes_HS22_V202401b.csv"),
-        gravity_path=os.path.join("gravity", "Gravity_V202211.csv")
+        data_path_pattern=os.path.join("data/dataset", "BACI*.csv"),
+        country_codes_path=os.path.join("data/dataset", "country_codes_V202401b.csv"),
+        product_codes_path=os.path.join("data/dataset", "product_codes_HS22_V202401b.csv"),
+        gravity_path=os.path.join("data/gravity", "Gravity_V202211.csv")
     ):
         """
          Initialize the DataLoader instance.
@@ -379,7 +379,7 @@ class DataLoader:
             The baseline aggregated dataset.
         """
         if load_precompute:
-            baseline_df = pd.read_csv(os.path.join('dataset', 'summed_base_data.csv'))
+            baseline_df = pd.read_csv(os.path.join('data/dataset', 'summed_base_data.csv'))
             baseline_df = baseline_df[baseline_df["v"] > 0]
             return baseline_df
 
@@ -582,7 +582,7 @@ class DataLoader:
         return None
 
     def preprocess_culture_and_country_names(self, df):
-        shapefile_path = os.path.join("dataset", "110m_cultural", "ne_110m_admin_0_countries.shp")
+        shapefile_path = os.path.join("data/dataset", "110m_cultural", "ne_110m_admin_0_countries.shp")
         world = gpd.read_file(shapefile_path)
         valid_countries = world['ADMIN'].tolist()
 
