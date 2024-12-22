@@ -19,7 +19,7 @@ The primary datasets used in this project include:
 
 1. **BACI CEPII dataset (2002–2022)**  
    <https://www.cepii.fr/CEPII/en/bdd_modele/bdd_modele_item.asp?id=37>  
-   This dataset provides bilateral trade data covering a wide range of products In total the dataset contains more than 200 Mio entries for various products.
+   This dataset provides bilateral trade data covering a wide range of products. In total the dataset contains more than 200 Mio entries for various products.
 
 2. **CEPII Gravity dataset (2002–2022)**  
    <https://www.cepii.fr/CEPII/en/bdd_modele/bdd_modele_item.asp?id=8>  
