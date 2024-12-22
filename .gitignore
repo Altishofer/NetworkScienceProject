@@ -9,3 +9,6 @@ basedata/*.csv
 
 *sandrin*
 *.png
+__pycache__/
+basedata/
+dataset/

@@ -6,6 +6,10 @@ import time
 import networkx as nx
 import pandas as pd
 import polars as pl
+import pycountry
+from fuzzywuzzy import process
+import geopandas as gpd
+
 
 def time_execution(method):
     """
@@ -67,6 +71,8 @@ class DataLoader:
         self.country_codes_path = country_codes_path
         self.product_codes_path = product_codes_path
         self.gravity_path = gravity_path
+
+        self.country_name_mapping = self.load_country_mapping()
 
         self._initialize_data()
 
@@ -350,6 +356,11 @@ class DataLoader:
         df_filtered = df_filtered.filter(pl.col("v") > 0)
         df_filtered = df_filtered.filter(pl.col("q") > 0)
 
+        # Adapt country names for used libraries
+        df_filtered = df_filtered.to_pandas()
+        df_filtered["export_country"] = df_filtered["export_country"].apply(lambda x: self.replace_countries(x))
+        df_filtered["import_country"] = df_filtered["import_country"].apply(lambda x: self.replace_countries(x))
+
         return df_filtered
 
     def get_baseline(self, load_precompute=False) -> pl.DataFrame:
@@ -433,6 +444,10 @@ class DataLoader:
             G = self._aggregate_and_build_graph(df_year)
             yearly_graphs[y] = G
 
+        for year, G in yearly_graphs.items():
+            mapping = {node: self.replace_countries(node) for node in G.nodes()}
+            yearly_graphs[year] = nx.relabel_nodes(G, mapping)
+
         return yearly_graphs
 
     def get_yearly_graphs(self, years):
@@ -461,4 +476,140 @@ class DataLoader:
             G = self._aggregate_and_build_graph(df_year)
             yearly_graphs[y] = G
 
+        for year, G in yearly_graphs.items():
+            mapping = {node: self.replace_countries(node) for node in G.nodes()}
+            yearly_graphs[year] = nx.relabel_nodes(G, mapping)
+
         return yearly_graphs
+
+    def load_country_mapping(self):
+        """
+        Load a mapping of country names to ISO Alpha-2 codes.
+
+        Returns
+        -------
+        dict
+            A dictionary mapping country names to ISO Alpha-2 codes.
+        """
+
+        return {
+            "USA": "United States of America",
+            "Türkiye": "Turkey",
+            'China, Hong Kong SAR': 'China',
+            'Other Asia, nes': 'China',
+            'Dem. Rep. of the Congo': 'Democratic Republic of the Congo',
+            'Serbia': "Republic of Serbia",
+            'Malta': "Italy",
+            'Russian Federation': "Russia",
+            'Eswatini': "eSwatini",
+            'Rep. of Korea': "South Korea",
+            'Czech Republic': 'Czechia',
+            'United States': "United States of America",
+            'Bolivia (Plurinational State of)': "Bolivia",
+            'Rep. of Moldova': "Moldova",
+            'United Rep. of Tanzania': "United Republic of Tanzania",
+            "Viet Nam": "Vietnam",
+            "Dem. People's Rep. of Korea": "South Korea",
+            "FS Micronesia": "Micronesia",
+            "Sudan (...2011)": "Sudan",
+            "rep. of korea": "South Korea"
+        }
+
+    def generate_fuzzy_mapping(self, unmatched_countries, valid_countries):
+        mapping = {}
+        for country in unmatched_countries:
+            match, score = process.extractOne(country, valid_countries)
+            if score > 70:
+                mapping[country] = match
+            else:
+                mapping[country] = None
+        return mapping
+
+    def fuzzy_match_country(self, country_name, country_list):
+        match, score = process.extractOne(country_name, country_list)
+        return match if score > 70 else None
+
+    def replace_countries(self, name: str) -> str:
+        """
+        Replace country names with standardized names based on a predefined mapping.
+
+        Parameters:
+            name (str): Original country name.
+
+        Returns:
+            str: Standardized country name.
+        """
+        return self.country_name_mapping.get(name, name)
+
+    def normalize_country_names(self, data, column_name, ):
+        return data[column_name].replace(self.country_name_mapping)
+
+    def get_country_code(self, country_name):
+        """
+        Extract the ISO Alpha-2 country code for a given country name.
+
+        Parameters:
+            country_name (str): The full name of the country.
+
+        Returns:
+            str: ISO Alpha-2 country code, or None if not found.
+        """
+        try:
+            # Use country name mapping to standardize names first
+            standardized_name = self.country_name_mapping.get(country_name, country_name)
+
+            # Try to fetch the country code directly
+            country_info = pycountry.countries.get(name=standardized_name)
+            if country_info:
+                return country_info.alpha_2
+
+            # If not found, attempt fuzzy matching with pycountry
+            matches = pycountry.countries.search_fuzzy(standardized_name)
+            if matches:
+                return matches[0].alpha_2
+
+            # Final fallback: fuzzy matching with predefined valid countries
+            valid_countries = [country.name for country in pycountry.countries]
+            fuzzy_match = self.fuzzy_match_country(standardized_name, valid_countries)
+            if fuzzy_match:
+                country_info = pycountry.countries.get(name=fuzzy_match)
+                return country_info.alpha_2 if country_info else None
+
+        except LookupError:
+            print(f"Country code not found for: {country_name}")
+            return None
+
+        return None
+
+    def preprocess_culture_and_country_names(self, df):
+        shapefile_path = os.path.join("dataset", "110m_cultural", "ne_110m_admin_0_countries.shp")
+        world = gpd.read_file(shapefile_path)
+        valid_countries = world['ADMIN'].tolist()
+
+        export_data = df.groupby('export_country')['v'].sum().reset_index()
+        import_data = df.groupby('import_country')['v'].sum().reset_index()
+
+        export_data['export_country'] = self.normalize_country_names(export_data, 'export_country')
+        import_data['import_country'] = self.normalize_country_names(import_data, 'import_country')
+
+        unmatched_exports = set(export_data['export_country']) - set(valid_countries)
+        unmatched_imports = set(import_data['import_country']) - set(valid_countries)
+
+        if unmatched_exports:
+            export_mapping = self.generate_fuzzy_mapping(unmatched_exports, valid_countries)
+            export_data['export_country'] = export_data['export_country'].replace(export_mapping)
+            print(f"Unmapped Names: {', '.join([name for name in export_mapping.keys() if not export_mapping[name]])}")
+
+        if unmatched_imports:
+            import_mapping = self.generate_fuzzy_mapping(unmatched_imports, valid_countries)
+            import_data['import_country'] = import_data['import_country'].replace(import_mapping)
+            print(f"Unmapped Names: {', '.join([name for name in import_mapping.keys() if not import_mapping[name]])}")
+
+        export_data = export_data.groupby('export_country')['v'].sum().reset_index()
+        import_data = import_data.groupby('import_country')['v'].sum().reset_index()
+
+        world_export = world.merge(export_data, left_on="ADMIN", right_on="export_country", how="left")
+        world_import = world.merge(import_data, left_on="ADMIN", right_on="import_country", how="left")
+
+        return world_export, world_import
+
