@@ -121,8 +121,8 @@ In this notebook, we extend our trade anomaly detection to a Convolutional Neura
 ## Contributors
 | Github User    | Github User Profile                                | Name               | StudentId   |
 |----------------|----------------------------------------------------|--------------------|-------------|
-| Altishofer     | [@altishofer](https://github.com/Altishofer)       | Sandrin Hunkeler   | 18‑253‑815  |
-| marcomeyer     | [@aezsmgfjf](https://github.com/aezsmgfjf)         | Marco Meyer        | 19‑210‑145  |
-| kevinbruendler | [@random9nessss](https://github.com/random9nessss) | Kevin Bründler     | 19‑919‑273  |
+| altishofer     | [@altishofer](https://github.com/Altishofer)       | Sandrin Hunkeler   | 18‑253‑815  |
+| aezsmgfjf      | [@aezsmgfjf](https://github.com/aezsmgfjf)         | Marco Meyer        | 19‑210‑145  |
+| random9nessss  | [@random9nessss](https://github.com/random9nessss) | Kevin Bründler     | 19‑919‑273  |
 
 ---
