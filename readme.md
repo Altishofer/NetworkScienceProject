@@ -67,7 +67,7 @@ This notebook explores various community detection algorithms applied to graphs.
 
 ---
 
-## 1.3_lithium_robustnes.ipynb
+## 1.3_lithium_robustness.ipynb
 This notebook investigates the robustness of lithium-related networks through simulations and centrality comparisons. The objective is to analyze how these networks respond to various attacks and explore structural metrics like centralities.
 
 ### Table of Contents
