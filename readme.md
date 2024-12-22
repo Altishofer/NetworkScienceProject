@@ -118,6 +118,8 @@ This notebook explores centrality metrics within material trade networks, focusi
 ## 10_outlier_detection_transformer.ipynb
 In this notebook, we engineer edge-level and node-level features, and build a Transformer-enhanced Graph Autoencoder (GAE) to detect anomalies in global trade patterns based on reconstruction errors.
 
+---
+
 ## 11_outlier_detection_cnn.ipynb
 In this notebook, we extend our trade anomaly detection to a Convolutional Neural Network (CNN)-inspired Graph Autoencoder.
 
