@@ -366,7 +366,7 @@ class DataLoader:
         df_filtered = df_filtered.to_pandas()
         df_filtered["export_country"] = df_filtered["export_country"].apply(lambda x: self.replace_countries(x))
         df_filtered["import_country"] = df_filtered["import_country"].apply(lambda x: self.replace_countries(x))
-        df_filtered = df_filtered.groupby(['t', 'export_country', 'import_country'], as_index=False).agg({'v': 'sum'})
+        df_filtered = df_filtered.groupby(['t', 'export_country', 'import_country'], as_index=False).agg({'v': 'sum', 'q': 'sum'})
 
         return df_filtered
 
@@ -388,7 +388,7 @@ class DataLoader:
         if load_precompute:
             baseline_df = pd.read_csv(os.path.join('data/dataset', 'summed_base_data.csv'))
         else:
-            baseline_df = self.df.group_by(['t', 'export_country', 'import_country']).agg([pl.sum('v').alias('v_sum')])
+            baseline_df = self.df.group_by(['t', 'export_country', 'import_country']).agg([pl.sum('v')])
             baseline_df = baseline_df.to_pandas()
 
         baseline_df = baseline_df[baseline_df["v"] > 0]
