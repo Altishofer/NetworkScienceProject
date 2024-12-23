@@ -152,18 +152,23 @@ class DataLoader:
         return pc
 
 
-    def _preprocess_gravity_data(self) -> pl.DataFrame:
+    def _preprocess_gravity_data(self, apply_ffill: bool = True) -> pl.DataFrame:
         """
         Load and preprocess the Gravity dataset:
         - Selects relevant columns
         - Filters for years > 2000
         - Ensures uniqueness of (iso3_o, iso3_d, year)
-        - Joins country names and performs forward-fill to handle missing values over time
+        - Joins country names and optionally performs forward-fill to handle missing values over time
+
+        Parameters
+        ----------
+        apply_ffill : bool
+            Whether to apply forward-fill for missing values (default is True).
 
         Returns
         -------
         pl.DataFrame
-            A Polars DataFrame containing gravity data with stable attributes forward-filled.
+            A Polars DataFrame containing gravity data with stable attributes.
         """
         gravity = pl.read_csv(self.gravity_path, ignore_errors=True)
         gravity = gravity.select([
@@ -211,8 +216,9 @@ class DataLoader:
         gravity_pd = gravity.to_pandas()
         gravity_pd = gravity_pd.sort_values(["iso3_o", "iso3_d", "year"])
 
-        gravity_pd = gravity_pd.groupby(["iso3_o", "iso3_d"]).apply(lambda g: g.ffill())
-        gravity_pd = gravity_pd.reset_index(drop=True)
+        if apply_ffill:
+            gravity_pd = gravity_pd.groupby(["iso3_o", "iso3_d"]).apply(lambda g: g.ffill())
+            gravity_pd = gravity_pd.reset_index(drop=True)
 
         gravity = pl.from_pandas(gravity_pd)
         return gravity
@@ -360,6 +366,7 @@ class DataLoader:
         df_filtered = df_filtered.to_pandas()
         df_filtered["export_country"] = df_filtered["export_country"].apply(lambda x: self.replace_countries(x))
         df_filtered["import_country"] = df_filtered["import_country"].apply(lambda x: self.replace_countries(x))
+        df_filtered = df_filtered.groupby(['t', 'export_country', 'import_country'], as_index=False).agg({'v': 'sum'})
 
         return df_filtered
 
@@ -380,10 +387,17 @@ class DataLoader:
         """
         if load_precompute:
             baseline_df = pd.read_csv(os.path.join('data/dataset', 'summed_base_data.csv'))
-            baseline_df = baseline_df[baseline_df["v"] > 0]
-            return baseline_df
+        else:
+            baseline_df = self.df.group_by(['t', 'export_country', 'import_country']).agg([pl.sum('v').alias('v_sum')])
+            baseline_df = baseline_df.to_pandas()
 
-        return self.df.group_by(['t', 'export_country', 'import_country']).agg([pl.sum('q').alias('q_sum')])
+        baseline_df = baseline_df[baseline_df["v"] > 0]
+
+        baseline_df["export_country"] = baseline_df["export_country"].apply(lambda x: self.replace_countries(x))
+        baseline_df["import_country"] = baseline_df["import_country"].apply(lambda x: self.replace_countries(x))
+        baseline_df = baseline_df.groupby(['t', 'export_country', 'import_country'], as_index=False).agg({'v': 'sum'})
+        return baseline_df
+
 
     def _aggregate_and_build_graph(self, df) -> nx.Graph:
         """
@@ -439,6 +453,7 @@ class DataLoader:
             A dictionary keyed by year, with values as NetworkX graphs.
         """
         yearly_graphs = {}
+        df = df[df["v"] > 0]
         for y in years:
             df_year = df[df["t"] == y]
             G = self._aggregate_and_build_graph(df_year)
@@ -467,6 +482,7 @@ class DataLoader:
         """
         df = self.df.to_pandas()
         yearly_graphs = {}
+        df = df[df["v"] > 0]
         for y in years:
             df_year = df[df["t"] == y]
 
