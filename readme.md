@@ -149,6 +149,11 @@ In this notebook, we extend our trade anomaly detection to a Convolutional Neura
 
 ---
 
+## 12_nSBM_communities_DiffDiff_Aggregate_Lithium.ipynb
+Diff in diff analysis for pagerank and betweenness centralities and nested stochastic block model using graph tools library.
+
+---
+
 ## Contributors
 | Github User    | Github User Profile                                | Name               | StudentId   |
 |----------------|----------------------------------------------------|--------------------|-------------|
