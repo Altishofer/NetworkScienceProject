@@ -124,8 +124,6 @@ This notebook explores centrality metrics within material trade networks, focusi
 
 This notebook explores the export and import trends of the aggregated product trades across different countries and regions. The aim is to provide insights into global trade patterns, including major exporters, importers, and the overall trade balance.
 
----
-
 ## Table of Contents
 
 1. [Introduction](#Introduction)
