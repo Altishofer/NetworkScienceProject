@@ -120,7 +120,7 @@ This notebook explores centrality metrics within material trade networks, focusi
 
 ---
 
-# 00_agnostic_full_pipeline_value.ipynb
+## 00_agnostic_full_pipeline_value.ipynb
 
 This notebook explores the export and import trends of the aggregated product trades across different countries and regions. The aim is to provide insights into global trade patterns, including major exporters, importers, and the overall trade balance.
 
