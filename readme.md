@@ -120,6 +120,27 @@ This notebook explores centrality metrics within material trade networks, focusi
 
 ---
 
+# 00_agnostic_full_pipeline_value.ipynb
+
+This notebook explores the export and import trends of the aggregated product trades across different countries and regions. The aim is to provide insights into global trade patterns, including major exporters, importers, and the overall trade balance.
+
+---
+
+## Table of Contents
+
+1. [Introduction](#Introduction)
+2. [Data Loading and Preparation](#Data-Loading-and-Preparation)
+3. [Load and Preprocess Data](#Load-and-Preprocess-Data)
+4. [Countries Ranked by Global Trade Volume](#Countries-Ranked-by-Global-Trade-Volume)
+5. [Temporal Trade Network Properties](#Temporal-Trade-Network-Properties)
+6. [Map Visualization of Country-Specific Trade](#Map-Visualization-of-Country-Specific-Trade)
+7. [Theoretical Graph Properties](#Theoretical-Graph-Properties)
+8. [Community Detection](#Community-Detection)
+9. [Temporal Macroeconomic Metrics](#Temporal-Macroeconomic-Metrics)
+10. [Centrality Analysis](#Centrality-Analysis)
+
+---
+
 ## 10_outlier_detection_transformer.ipynb
 In this notebook, we engineer edge-level and node-level features, and build a Transformer-enhanced Graph Autoencoder (GAE) to detect anomalies in global trade patterns based on reconstruction errors.
 
