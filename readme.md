@@ -78,6 +78,11 @@ This notebook investigates the robustness of lithium-related networks through si
 
 ---
 
+## 1.4_lithium_key_players.ipynb
+This notebook investigates the export evolution and centrality metrics for the countries with the largest known lithium reserves as of 2022.
+
+---
+
 ## 1.5_lithium_metrics_temporal.ipynb
 This notebook computes key structural metrics for trade networks over time, providing insights into both their topology and node-level properties. It also examines macroeconomic factors that might influence the evolution of the network.
 
@@ -112,6 +117,8 @@ This notebook explores centrality metrics within material trade networks, focusi
 
 ## 10_outlier_detection_transformer.ipynb
 In this notebook, we engineer edge-level and node-level features, and build a Transformer-enhanced Graph Autoencoder (GAE) to detect anomalies in global trade patterns based on reconstruction errors.
+
+---
 
 ## 11_outlier_detection_cnn.ipynb
 In this notebook, we extend our trade anomaly detection to a Convolutional Neural Network (CNN)-inspired Graph Autoencoder.
