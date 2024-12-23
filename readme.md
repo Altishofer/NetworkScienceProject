@@ -81,6 +81,11 @@ This notebook investigates the robustness of lithium-related networks through si
 ## 1.4_lithium_key_players.ipynb
 This notebook investigates the export evolution and centrality metrics for the countries with the largest known lithium reserves as of 2022.
 
+### Table of Contents
+1. [Introduction](#introduction)
+2. [Data Loading and Preparation](##data-loading-and-preparation)
+3. [Export Key Player Analysis](#export-analysis)
+4. [Import Key Player Analaysis](#import-analysis)
 ---
 
 ## 1.5_lithium_metrics_temporal.ipynb
